@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, BigInteger
+from sqlalchemy import Column, Integer, String, DateTime, BigInteger, Index, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -13,12 +13,18 @@ class Payslip(Base):
     month = Column(Integer, nullable=False)
     year = Column(Integer, nullable=False)
     filename = Column(String(255), nullable=False)
-    file_url = Column(String(500), nullable=False)
+    file_url = Column(String(500), nullable=False, unique=True)
     file_size = Column(BigInteger, nullable=True)
-    upload_timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    
-    # Composite index for efficient queries
+    upload_timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+    # Composite constraints and indexes for efficient queries
     __table_args__ = (
+        # Unique constraint to prevent duplicate payslips for same employee/month/year
+        UniqueConstraint('employee_id', 'month', 'year', name='uq_employee_month_year'),
+        # Composite index for common query patterns
+        Index('ix_employee_year_month', 'employee_id', 'year', 'month'),
+        Index('ix_year_month', 'year', 'month'),
+        Index('ix_upload_timestamp_desc', upload_timestamp.desc()),
         {'extend_existing': True}
     )
 
