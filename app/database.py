@@ -13,19 +13,26 @@ logger = logging.getLogger(__name__)
 # Database configuration
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:password@localhost:5432/payslip_db"
+    "sqlite:///./payslip_demo.db"  # Use SQLite for demo
 )
 
 # Create engine with enhanced connection pooling
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,  # Verify connections before use
-    pool_recycle=3600,   # Recycle connections every hour
-    pool_timeout=30,     # Timeout for getting connection from pool
-    echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # Log SQL queries in debug mode
-)
+if "sqlite" in DATABASE_URL:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},  # SQLite specific
+        echo=os.getenv("SQL_ECHO", "false").lower() == "true",
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,  # Verify connections before use
+        pool_recycle=3600,   # Recycle connections every hour
+        pool_timeout=30,     # Timeout for getting connection from pool
+        echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # Log SQL queries in debug mode
+    )
 
 # Add connection event listeners for better error handling
 @event.listens_for(engine, "connect")
