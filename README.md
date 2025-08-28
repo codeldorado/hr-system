@@ -8,6 +8,7 @@ This project implements a comprehensive HR platform payslip management system de
 
 ### System Components
 
+- **React Frontend**: Modern TypeScript UI with Material-UI components
 - **FastAPI Backend**: High-performance async API with automatic documentation
 - **PostgreSQL Database**: Multi-AZ RDS with automated backups and read replicas
 - **S3 Storage**: Encrypted file storage with lifecycle management
@@ -49,9 +50,22 @@ This project implements a comprehensive HR platform payslip management system de
    ```
 
 3. **Access the application:**
+   - Frontend: http://localhost:3000
    - API: http://localhost:8000
    - Documentation: http://localhost:8000/docs
    - Health Check: http://localhost:8000/health
+
+### Demo Credentials
+
+For testing the application, use these demo accounts:
+
+**Employee Account:**
+- Email: `demo@company.com`
+- Password: `demo123`
+
+**HR Manager Account:**
+- Email: `hr@company.com`
+- Password: `hr123`
 
 ## API Documentation
 
@@ -150,6 +164,28 @@ flake8 app/
 
 # Type checking
 mypy app/
+```
+
+### Project Structure
+```
+payslip-microservice/
+├── frontend/              # React TypeScript frontend
+│   ├── src/              # React source code
+│   ├── public/           # Static assets
+│   └── Dockerfile        # Frontend container
+├── app/                  # FastAPI application
+│   ├── main.py          # Main application entry
+│   ├── models.py        # SQLAlchemy models
+│   ├── schemas.py       # Pydantic schemas
+│   ├── database.py      # Database configuration
+│   └── services/        # Business logic
+├── infrastructure/      # Terraform configurations
+│   ├── modules/        # Reusable Terraform modules
+│   └── environments/   # Environment-specific configs
+├── tests/              # Test suite
+├── docs/               # Documentation
+├── .github/            # CI/CD workflows
+└── scripts/            # Utility scripts
 ```
 
 ## Security

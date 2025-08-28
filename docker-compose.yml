@@ -119,6 +119,46 @@ services:
     profiles:
       - dev
 
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: payslip-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Frontend development version
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: payslip-frontend-dev
+    ports:
+      - "3001:3000"
+    depends_on:
+      - app-dev
+    environment:
+      REACT_APP_API_URL: http://localhost:8001
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    command: npm start
+    profiles:
+      - dev
+
 volumes:
   postgres_data:
   redis_data:
