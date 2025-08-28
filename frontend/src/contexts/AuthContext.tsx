@@ -36,21 +36,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (storedToken) {
         try {
-          // Verify token is still valid
-          const decoded: any = jwtDecode(storedToken);
-          const currentTime = Date.now() / 1000;
-          
-          if (decoded.exp > currentTime) {
+          // Handle demo tokens (not real JWT)
+          if (storedToken.includes('demo-jwt-token')) {
             setToken(storedToken);
             setUser({
-              id: decoded.user_id,
-              employee_id: decoded.employee_id,
-              name: decoded.name,
-              email: decoded.email,
-              role: decoded.role,
+              id: 1,
+              employee_id: 123,
+              name: 'Demo User',
+              email: 'demo@company.com',
+              role: 'employee',
+            });
+          } else if (storedToken.includes('hr-jwt-token')) {
+            setToken(storedToken);
+            setUser({
+              id: 2,
+              employee_id: 456,
+              name: 'HR Manager',
+              email: 'hr@company.com',
+              role: 'hr_manager',
             });
           } else {
-            localStorage.removeItem('auth_token');
+            // Try to decode real JWT token
+            const decoded: any = jwtDecode(storedToken);
+            const currentTime = Date.now() / 1000;
+
+            if (decoded.exp > currentTime) {
+              setToken(storedToken);
+              setUser({
+                id: decoded.user_id,
+                employee_id: decoded.employee_id,
+                name: decoded.name,
+                email: decoded.email,
+                role: decoded.role,
+              });
+            } else {
+              localStorage.removeItem('auth_token');
+            }
           }
         } catch (error) {
           console.error('Invalid token:', error);
