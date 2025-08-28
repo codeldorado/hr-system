@@ -54,7 +54,10 @@ services:
       retries: 5
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
     container_name: payslip-app
     environment:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/payslip_db
@@ -63,6 +66,7 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       AWS_REGION: eu-west-1
       S3_BUCKET_NAME: payslip-storage-bucket
+      APP_ENV: development
     ports:
       - "8000:8000"
     depends_on:
@@ -75,7 +79,45 @@ services:
     volumes:
       - ./app:/app/app
       - ./tests:/app/tests
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Development version with hot reload
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: payslip-app-dev
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/payslip_db
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: eu-west-1
+      S3_BUCKET_NAME: payslip-storage-bucket
+      APP_ENV: development
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+      - ./tests:/app/tests
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    profiles:
+      - dev
 
 volumes:
   postgres_data:

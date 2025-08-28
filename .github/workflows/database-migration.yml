@@ -1,0 +1,102 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run migration'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - prod
+      migration_action:
+        description: 'Migration action'
+        required: true
+        default: 'upgrade'
+        type: choice
+        options:
+        - upgrade
+        - downgrade
+        - current
+        - history
+      revision:
+        description: 'Revision (for downgrade)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: eu-west-1
+
+jobs:
+  database-migration:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Get database URL from Secrets Manager
+      id: get-db-url
+      run: |
+        DB_URL=$(aws secretsmanager get-secret-value \
+          --secret-id "payslip-microservice-${{ github.event.inputs.environment }}-db-url" \
+          --query SecretString --output text)
+        echo "::add-mask::$DB_URL"
+        echo "DATABASE_URL=$DB_URL" >> $GITHUB_ENV
+
+    - name: Run Alembic Migration
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+      run: |
+        case "${{ github.event.inputs.migration_action }}" in
+          "upgrade")
+            echo "Running database upgrade..."
+            alembic upgrade head
+            ;;
+          "downgrade")
+            if [ -n "${{ github.event.inputs.revision }}" ]; then
+              echo "Running database downgrade to ${{ github.event.inputs.revision }}..."
+              alembic downgrade ${{ github.event.inputs.revision }}
+            else
+              echo "Running database downgrade by 1 revision..."
+              alembic downgrade -1
+            fi
+            ;;
+          "current")
+            echo "Showing current database revision..."
+            alembic current
+            ;;
+          "history")
+            echo "Showing migration history..."
+            alembic history
+            ;;
+        esac
+
+    - name: Verify Migration Status
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+      run: |
+        echo "Current database revision:"
+        alembic current
+        echo "Migration completed successfully!"
