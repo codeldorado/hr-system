@@ -10,7 +10,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  Chip,
 } from '@mui/material';
 import {
   Upload,
@@ -26,6 +25,33 @@ import { payslipService } from '../services/payslipService';
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Utility functions
+  const getMonthName = (month: number): string => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1] || 'Unknown';
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const { data: payslips = [] } = useQuery(
     ['payslips', user?.employee_id],
@@ -137,21 +163,28 @@ const Dashboard: React.FC = () => {
                 {payslips.slice(0, 5).map((payslip) => (
                   <ListItem key={payslip.id} divider>
                     <ListItemText
-                      primary={`${payslipService.getMonthName(payslip.month)} ${payslip.year}`}
+                      primary={`${getMonthName(payslip.month)} ${payslip.year}`}
                       secondary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                          <Typography variant="body2" color="textSecondary">
-                            {payslip.filename}
-                          </Typography>
-                          <Chip
-                            label={payslipService.formatFileSize(payslip.file_size)}
-                            size="small"
-                            variant="outlined"
-                          />
-                          <Typography variant="body2" color="textSecondary">
-                            {payslipService.formatDate(payslip.upload_timestamp)}
-                          </Typography>
-                        </Box>
+                        <React.Fragment>
+                          <span style={{ display: 'block', marginTop: '4px' }}>
+                            <span style={{ marginRight: '8px', color: '#666' }}>
+                              {payslip.filename}
+                            </span>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              border: '1px solid #ccc',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              marginRight: '8px'
+                            }}>
+                              {formatFileSize(payslip.file_size)}
+                            </span>
+                            <span style={{ color: '#666' }}>
+                              {formatDate(payslip.upload_timestamp)}
+                            </span>
+                          </span>
+                        </React.Fragment>
                       }
                     />
                   </ListItem>
