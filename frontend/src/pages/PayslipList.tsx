@@ -52,7 +52,11 @@ const PayslipList: React.FC = () => {
   const { data: payslips = [], isLoading, error } = useQuery(
     ['payslips', filters],
     () => {
-      const queryFilters: any = {};
+      const queryFilters: {
+        employee_id?: number;
+        year?: number;
+        month?: number;
+      } = {};
       
       if (user?.role === 'employee') {
         queryFilters.employee_id = user.employee_id;

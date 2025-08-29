@@ -2,6 +2,15 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { jwtDecode } from 'jwt-decode';
 import { authService } from '../services/authService';
 
+interface JwtPayload {
+  exp: number;
+  user_id: number;
+  employee_id: number;
+  name: string;
+  email: string;
+  role: 'employee' | 'hr_manager' | 'administrator' | 'auditor';
+}
+
 interface User {
   id: number;
   employee_id: number;
@@ -57,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             });
           } else {
             // Try to decode real JWT token
-            const decoded: any = jwtDecode(storedToken);
+            const decoded: JwtPayload = jwtDecode<JwtPayload>(storedToken);
             const currentTime = Date.now() / 1000;
 
             if (decoded.exp > currentTime) {

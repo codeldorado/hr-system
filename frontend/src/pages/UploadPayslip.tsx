@@ -18,6 +18,14 @@ import { useMutation, useQueryClient } from 'react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { payslipService } from '../services/payslipService';
 
+interface UploadError {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+}
+
 const UploadPayslip: React.FC = () => {
   const [employeeId, setEmployeeId] = useState('');
   const [month, setMonth] = useState('');
@@ -42,7 +50,9 @@ const UploadPayslip: React.FC = () => {
   const uploadMutation = useMutation(
     (data: { employee_id: number; month: number; year: number; file: File }) =>
       payslipService.uploadPayslip(data, (progressEvent) => {
-        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        const progress = progressEvent.total
+          ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          : 0;
         setUploadProgress(progress);
       }),
     {
@@ -54,7 +64,7 @@ const UploadPayslip: React.FC = () => {
           navigate('/payslips');
         }, 2000);
       },
-      onError: (error: any) => {
+      onError: (error: UploadError) => {
         setError(error.response?.data?.detail || 'Upload failed');
         setUploadProgress(0);
       },

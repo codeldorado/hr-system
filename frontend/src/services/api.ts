@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, AxiosProgressEvent } from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -42,19 +42,19 @@ class ApiService {
   }
 
   // Generic GET request
-  async get<T>(url: string, params?: any): Promise<T> {
+  async get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
     const response = await this.api.get<T>(url, { params });
     return response.data;
   }
 
   // Generic POST request
-  async post<T>(url: string, data?: any, config?: any): Promise<T> {
+  async post<T>(url: string, data?: unknown, config?: Record<string, unknown>): Promise<T> {
     const response = await this.api.post<T>(url, data, config);
     return response.data;
   }
 
   // Generic PUT request
-  async put<T>(url: string, data?: any): Promise<T> {
+  async put<T>(url: string, data?: unknown): Promise<T> {
     const response = await this.api.put<T>(url, data);
     return response.data;
   }
@@ -69,7 +69,7 @@ class ApiService {
   async uploadFile<T>(
     url: string,
     formData: FormData,
-    onUploadProgress?: (progressEvent: any) => void
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
   ): Promise<T> {
     const response = await this.api.post<T>(url, formData, {
       headers: {

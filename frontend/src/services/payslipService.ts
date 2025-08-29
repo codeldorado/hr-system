@@ -1,4 +1,5 @@
 import { apiService } from './api';
+import { AxiosProgressEvent } from 'axios';
 
 export interface Payslip {
   id: number;
@@ -11,7 +12,7 @@ export interface Payslip {
   upload_timestamp: string;
 }
 
-export interface PayslipFilters {
+export interface PayslipFilters extends Record<string, unknown> {
   employee_id?: number;
   year?: number;
   month?: number;
@@ -37,7 +38,7 @@ class PayslipService {
 
   async uploadPayslip(
     request: UploadPayslipRequest,
-    onUploadProgress?: (progressEvent: any) => void
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
   ): Promise<Payslip> {
     const formData = new FormData();
     formData.append('employee_id', request.employee_id.toString());
