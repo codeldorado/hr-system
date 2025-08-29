@@ -34,7 +34,7 @@ def add_sample_data():
             "month": 11,
             "year": 2024,
             "filename": "november_2024_payslip.pdf",
-            "file_url": "https://demo-bucket.s3.amazonaws.com/payslips/123/2024/11/sample.pdf",
+            "file_url": "http://localhost:8000/files/payslips/123/2024/11/demo-sample.pdf",
             "file_size": 1048576
         },
         {
@@ -42,7 +42,7 @@ def add_sample_data():
             "month": 10,
             "year": 2024,
             "filename": "october_2024_payslip.pdf",
-            "file_url": "https://demo-bucket.s3.amazonaws.com/payslips/123/2024/10/sample.pdf",
+            "file_url": "http://localhost:8000/files/payslips/123/2024/10/demo-sample.pdf",
             "file_size": 987654
         },
         {
@@ -50,7 +50,7 @@ def add_sample_data():
             "month": 11,
             "year": 2024,
             "filename": "november_2024_hr_payslip.pdf",
-            "file_url": "https://demo-bucket.s3.amazonaws.com/payslips/456/2024/11/sample.pdf",
+            "file_url": "http://localhost:8000/files/payslips/456/2024/11/demo-sample.pdf",
             "file_size": 1234567
         }
     ]

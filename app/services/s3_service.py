@@ -4,6 +4,8 @@ from botocore.exceptions import ClientError
 from fastapi import UploadFile, HTTPException
 from typing import Optional
 import logging
+import aiofiles
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +24,11 @@ class S3Service:
                 aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
             )
         else:
-            # Demo mode - no real S3 client needed
+            # Demo mode - use local file storage
             self.s3_client = None
-            logger.info("Running in demo mode - S3 operations will be mocked")
+            self.local_storage_path = Path("local_storage")
+            self.local_storage_path.mkdir(exist_ok=True)
+            logger.info(f"Running in demo mode - files will be stored locally in {self.local_storage_path}")
 
     async def upload_file(self, file: UploadFile, key: str) -> str:
         """
@@ -45,9 +49,17 @@ class S3Service:
             await file.seek(0)
 
             if self.demo_mode:
-                # Demo mode - simulate successful upload
-                file_url = f"https://demo-{self.bucket_name}.s3.{self.region}.amazonaws.com/{key}"
-                logger.info(f"Demo mode: Simulated file upload to S3: {key}")
+                # Demo mode - save file locally
+                local_file_path = self.local_storage_path / key
+                local_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Save file to local storage
+                async with aiofiles.open(local_file_path, 'wb') as f:
+                    await f.write(file_content)
+
+                # Return local URL that will be served by FastAPI
+                file_url = f"http://localhost:8000/files/{key}"
+                logger.info(f"Demo mode: Saved file locally: {local_file_path}")
                 return file_url
             else:
                 # Production mode - actual S3 upload
@@ -88,9 +100,17 @@ class S3Service:
         """
         try:
             if self.demo_mode:
-                # Demo mode - simulate successful deletion
-                logger.info(f"Demo mode: Simulated file deletion from S3: {file_url}")
-                return True
+                # Demo mode - delete local file
+                if file_url.startswith("http://localhost:8000/files/"):
+                    key = file_url.replace("http://localhost:8000/files/", "")
+                    local_file_path = self.local_storage_path / key
+                    if local_file_path.exists():
+                        local_file_path.unlink()
+                        logger.info(f"Demo mode: Deleted local file: {local_file_path}")
+                    return True
+                else:
+                    logger.info(f"Demo mode: Simulated file deletion: {file_url}")
+                    return True
             else:
                 # Extract key from URL
                 key = file_url.split(f"{self.bucket_name}.s3.{self.region}.amazonaws.com/")[1]

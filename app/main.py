@@ -1,10 +1,13 @@
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 import os
 from datetime import datetime
 import uuid
+import os
+from pathlib import Path
 
 from . import models, schemas, database
 from .database import get_db
@@ -177,10 +180,42 @@ async def delete_payslip(payslip_id: int, db: Session = Depends(get_db)):
         db.commit()
         
         return {"message": "Payslip deleted successfully"}
-        
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete payslip: {str(e)}")
+
+@app.get("/files/{file_path:path}")
+async def serve_file(file_path: str):
+    """
+    Serve files from local storage in demo mode
+    """
+    # Security check - ensure file path is within local_storage directory
+    local_storage_path = Path("local_storage")
+    full_file_path = local_storage_path / file_path
+
+    # Resolve paths to prevent directory traversal attacks
+    try:
+        full_file_path = full_file_path.resolve()
+        local_storage_path = local_storage_path.resolve()
+
+        # Ensure the file is within the local storage directory
+        if not str(full_file_path).startswith(str(local_storage_path)):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Check if file exists
+        if not full_file_path.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # Return the file
+        return FileResponse(
+            path=str(full_file_path),
+            media_type='application/pdf',
+            filename=full_file_path.name
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error serving file: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
