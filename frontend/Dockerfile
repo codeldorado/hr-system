@@ -1,5 +1,5 @@
 # Multi-stage build for React frontend
-FROM node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -13,8 +13,8 @@ RUN npm ci --only=production
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with legacy OpenSSL provider for Node.js 18+ compatibility
+RUN NODE_OPTIONS="--openssl-legacy-provider" npm run build
 
 # Production stage with nginx
 FROM nginx:alpine
