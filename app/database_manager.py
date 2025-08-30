@@ -1,6 +1,7 @@
 """
 Database management utilities for the payslip microservice
 """
+
 import logging
 
 from sqlalchemy import create_engine, text
