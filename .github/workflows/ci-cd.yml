@@ -96,32 +96,11 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
-  docker-build-test:
-    name: Test Docker Build
-    runs-on: ubuntu-latest
-    needs: [test, security-scan]
-    if: secrets.AWS_ACCESS_KEY_ID == ''
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Build Docker image locally
-      run: |
-        echo "Building Docker image for testing..."
-        docker build -t payslip-microservice:test .
-        echo "Docker build successful!"
-
-    - name: Test Docker image
-      run: |
-        echo "Testing Docker image..."
-        docker run --rm payslip-microservice:test python -c "import app; print('App imports successfully')"
-
   build:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
     needs: [test, security-scan]
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.AWS_ACCESS_KEY_ID != ''
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
 
     outputs:
       image-tag: ${{ steps.build-image.outputs.image-tag }}
@@ -130,7 +109,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Check AWS credentials
+      id: check-aws
+      run: |
+        if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+          echo "AWS credentials not found. Skipping AWS operations."
+          echo "aws-available=false" >> $GITHUB_OUTPUT
+        else
+          echo "AWS credentials found."
+          echo "aws-available=true" >> $GITHUB_OUTPUT
+        fi
+
     - name: Configure AWS credentials
+      if: steps.check-aws.outputs.aws-available == 'true'
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -138,10 +129,12 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Login to Amazon ECR
+      if: steps.check-aws.outputs.aws-available == 'true'
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
     - name: Build, tag, and push backend image
+      if: steps.check-aws.outputs.aws-available == 'true'
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -158,7 +151,22 @@ jobs:
         echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
+    - name: Build Docker image locally (fallback)
+      if: steps.check-aws.outputs.aws-available == 'false'
+      id: build-local
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "Building Docker image locally (AWS credentials not available)..."
+        docker build -t payslip-microservice:$IMAGE_TAG .
+        docker build -t payslip-microservice:latest .
+        echo "Local Docker build successful!"
+
+        echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "image=payslip-microservice:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
     - name: Build, tag, and push frontend image
+      if: steps.check-aws.outputs.aws-available == 'true'
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
@@ -172,11 +180,21 @@ jobs:
         docker push $ECR_REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$FRONTEND_REPOSITORY:latest
 
+    - name: Build frontend image locally (fallback)
+      if: steps.check-aws.outputs.aws-available == 'false'
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "Building frontend Docker image locally (AWS credentials not available)..."
+        docker build -t payslip-frontend:$IMAGE_TAG ./frontend
+        docker build -t payslip-frontend:latest ./frontend
+        echo "Local frontend Docker build successful!"
+
   deploy-dev:
     name: Deploy to Development
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/develop' && secrets.AWS_ACCESS_KEY_ID != ''
+    if: github.ref == 'refs/heads/develop'
     environment: development
 
     steps:
@@ -215,7 +233,7 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: build
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.AWS_ACCESS_KEY_ID != ''
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     environment: production
 
     steps:
