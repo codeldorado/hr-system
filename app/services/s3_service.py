@@ -1,13 +1,15 @@
-import boto3
-import os
-from botocore.exceptions import ClientError
-from fastapi import UploadFile, HTTPException
-from typing import Optional
 import logging
-import aiofiles
+import os
 from pathlib import Path
+from typing import Optional
+
+import aiofiles
+import boto3
+from botocore.exceptions import ClientError
+from fastapi import HTTPException, UploadFile
 
 logger = logging.getLogger(__name__)
+
 
 class S3Service:
     def __init__(self):
@@ -18,17 +20,20 @@ class S3Service:
         if not self.demo_mode:
             # Initialize S3 client for production
             self.s3_client = boto3.client(
-                's3',
+                "s3",
                 region_name=self.region,
                 aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             )
         else:
             # Demo mode - use local file storage
             self.s3_client = None
             self.local_storage_path = Path("local_storage")
             self.local_storage_path.mkdir(exist_ok=True)
-            logger.info(f"Running in demo mode - files will be stored locally in {self.local_storage_path}")
+            logger.info(
+                f"Running in demo mode - files will be stored locally in "
+                f"{self.local_storage_path}"
+            )
 
     async def upload_file(self, file: UploadFile, key: str) -> str:
         """
@@ -54,7 +59,7 @@ class S3Service:
                 local_file_path.parent.mkdir(parents=True, exist_ok=True)
 
                 # Save file to local storage
-                async with aiofiles.open(local_file_path, 'wb') as f:
+                async with aiofiles.open(local_file_path, "wb") as f:
                     await f.write(file_content)
 
                 # Return local URL that will be served by FastAPI
@@ -67,23 +72,27 @@ class S3Service:
                     Bucket=self.bucket_name,
                     Key=key,
                     Body=file_content,
-                    ContentType='application/pdf',
-                    ServerSideEncryption='AES256',  # Encrypt at rest
+                    ContentType="application/pdf",
+                    ServerSideEncryption="AES256",  # Encrypt at rest
                     Metadata={
-                        'original_filename': file.filename,
-                        'content_type': file.content_type or 'application/pdf'
-                    }
+                        "original_filename": file.filename,
+                        "content_type": file.content_type or "application/pdf",
+                    },
                 )
 
                 # Generate S3 URL
-                file_url = f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{key}"
+                file_url = (
+                    f"https://{self.bucket_name}.s3.{self.region}.amazonaws.com/{key}"
+                )
 
                 logger.info(f"Successfully uploaded file to S3: {key}")
                 return file_url
 
         except ClientError as e:
             logger.error(f"Failed to upload file to S3: {e}")
-            raise HTTPException(status_code=500, detail="Failed to upload file to storage")
+            raise HTTPException(
+                status_code=500, detail="Failed to upload file to storage"
+            )
         except Exception as e:
             logger.error(f"Unexpected error during file upload: {e}")
             raise HTTPException(status_code=500, detail="File upload failed")
@@ -113,13 +122,12 @@ class S3Service:
                     return True
             else:
                 # Extract key from URL
-                key = file_url.split(f"{self.bucket_name}.s3.{self.region}.amazonaws.com/")[1]
+                key = file_url.split(
+                    f"{self.bucket_name}.s3.{self.region}.amazonaws.com/"
+                )[1]
 
                 # Delete from S3
-                self.s3_client.delete_object(
-                    Bucket=self.bucket_name,
-                    Key=key
-                )
+                self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
 
                 logger.info(f"Successfully deleted file from S3: {key}")
                 return True
@@ -131,22 +139,24 @@ class S3Service:
             logger.error(f"Unexpected error during file deletion: {e}")
             return False
 
-    async def generate_presigned_url(self, key: str, expiration: int = 3600) -> Optional[str]:
+    async def generate_presigned_url(
+        self, key: str, expiration: int = 3600
+    ) -> Optional[str]:
         """
         Generate presigned URL for secure file access
-        
+
         Args:
             key: S3 object key
             expiration: URL expiration time in seconds
-            
+
         Returns:
             str: Presigned URL or None if failed
         """
         try:
             response = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': key},
-                ExpiresIn=expiration
+                "get_object",
+                Params={"Bucket": self.bucket_name, "Key": key},
+                ExpiresIn=expiration,
             )
             return response
         except ClientError as e:
@@ -160,6 +170,7 @@ class S3Service:
             return True
         except ClientError:
             return False
+
 
 # Create singleton instance
 s3_service = S3Service()
