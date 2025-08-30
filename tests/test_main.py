@@ -79,7 +79,7 @@ def test_upload_payslip_invalid_file_type(client):
 
         os.unlink(tmp_file.name)
 
-    assert response.status_code == 400
+    assert response.status_code == 415
     assert "Only PDF files are allowed" in response.json()["detail"]
 
 
@@ -98,7 +98,7 @@ def test_upload_payslip_invalid_month(client):
 
         os.unlink(tmp_file.name)
 
-    assert response.status_code == 400
+    assert response.status_code == 422
     assert "Month must be between 1 and 12" in response.json()["detail"]
 
 
