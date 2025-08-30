@@ -224,8 +224,10 @@ class TestPayslipModel:
 
     def test_ordering(self, db_session):
         """Test ordering of payslip records"""
-        # Create test data with different timestamps
-        import time
+        # Create test data with explicit timestamps
+        from datetime import datetime, timedelta, timezone
+
+        base_time = datetime.now(timezone.utc)
 
         payslips_data = [
             {
@@ -235,6 +237,7 @@ class TestPayslipModel:
                 "filename": "first.pdf",
                 "file_url": "first_url.pdf",
                 "file_size": 1000,
+                "upload_timestamp": base_time,
             },
             {
                 "employee_id": 300,
@@ -243,20 +246,15 @@ class TestPayslipModel:
                 "filename": "second.pdf",
                 "file_url": "second_url.pdf",
                 "file_size": 1000,
+                "upload_timestamp": base_time + timedelta(seconds=1),
             },
         ]
 
-        # Add first payslip
-        payslip1 = Payslip(**payslips_data[0])
-        db_session.add(payslip1)
-        db_session.commit()
+        # Add payslips with explicit timestamps
+        for data in payslips_data:
+            payslip = Payslip(**data)
+            db_session.add(payslip)
 
-        # Wait to ensure different timestamp
-        time.sleep(0.1)
-
-        # Add second payslip
-        payslip2 = Payslip(**payslips_data[1])
-        db_session.add(payslip2)
         db_session.commit()
 
         # Test ordering by upload_timestamp descending
