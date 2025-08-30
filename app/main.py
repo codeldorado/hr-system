@@ -69,11 +69,17 @@ async def upload_payslip(
 
     # Validate file type
     if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+        raise HTTPException(status_code=415, detail="Only PDF files are allowed")
+
+    # Validate file size (10MB limit)
+    if file.size and file.size > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413, detail="File size too large. Maximum size is 10MB"
+        )
 
     # Validate month
     if month < 1 or month > 12:
-        raise HTTPException(status_code=400, detail="Month must be between 1 and 12")
+        raise HTTPException(status_code=422, detail="Month must be between 1 and 12")
 
     # Check if payslip already exists for this employee/month/year
     existing_payslip = (
